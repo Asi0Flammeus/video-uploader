@@ -2,49 +2,69 @@
 Configuration loader for PeerTube uploader.
 """
 import os
-# Optionally load environment variables from a .env file if python-dotenv is installed
+# Optionally load environment variables from a .env file in the current working directory
+# Optionally load .env via python-dotenv if available
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    env_path = os.path.join(os.getcwd(), '.env')
+    if os.path.isfile(env_path):
+        load_dotenv(env_path, override=True)
 except ImportError:
-    # python-dotenv is not installed; environment variables must be set externally
+    # python-dotenv not available
     pass
+
+# Fallback: manual parsing of .env key=value lines
+_env_path = os.path.join(os.getcwd(), '.env')
+if os.path.isfile(_env_path):
+    with open(_env_path, 'r', encoding='utf-8') as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if not _line or _line.startswith('#') or '=' not in _line:
+                continue
+            _key, _val = _line.split('=', 1)
+            _key = _key.strip()
+            _val = _val.strip()
+            # Strip surrounding quotes
+            if (_val.startswith('"') and _val.endswith('"')) or (_val.startswith("'") and _val.endswith("'")):
+                _val = _val[1:-1].strip()
+            os.environ.setdefault(_key, _val)
 
 class Config:
     """
     Load and store PeerTube configuration from environment variables.
-    Required variables:
-      - UPLOAD_URL
-      - PEERTUBE_INSTANCE
-      - CLIENT_ID
-      - CLIENT_SECRET
-      - USERNAME
-      - PASSWORD
-      - VERIFY_SSL (optional, defaults to true)
+    Required variables: UPLOAD_URL, PEERTUBE_INSTANCE, CLIENT_ID,
+    CLIENT_SECRET, USERNAME, PASSWORD. Optional VERIFY_SSL.
+    Surrounding whitespace and quotes are stripped from values.
     """
     def __init__(self):
-        # Load and normalize URLs (remove trailing slash if present)
-        _upload = os.getenv("UPLOAD_URL")
-        self.upload_url = _upload.rstrip("/") if _upload else _upload
-        _instance = os.getenv("PEERTUBE_INSTANCE")
-        self.instance_url = _instance.rstrip("/") if _instance else _instance
-        self.client_id = os.getenv("CLIENT_ID")
-        self.client_secret = os.getenv("CLIENT_SECRET")
-        self.username = os.getenv("USERNAME")
-        self.password = os.getenv("PASSWORD")
-        # SSL verification flag
-        self.verify_ssl = os.getenv("VERIFY_SSL", "true").lower() in ("true", "1", "yes")
+        missing = []
+        # Helper to read and clean env vars
+        def _get_env(name, required=True, default=None):
+            raw = os.getenv(name)
+            if raw is None:
+                if required:
+                    missing.append(name)
+                return default
+            val = raw.strip()
+            # Strip surrounding single or double quotes
+            if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                val = val[1:-1].strip()
+            return val
 
-        missing = [
-            name for name in (
-                "UPLOAD_URL",
-                "PEERTUBE_INSTANCE",
-                "CLIENT_ID",
-                "CLIENT_SECRET",
-                "USERNAME",
-                "PASSWORD",
-            )
-            if os.getenv(name) is None
-        ]
+        # Read required variables
+        upload = _get_env("UPLOAD_URL")
+        instance = _get_env("PEERTUBE_INSTANCE")
+        self.client_id = _get_env("CLIENT_ID")
+        self.client_secret = _get_env("CLIENT_SECRET")
+        self.username = _get_env("USERNAME")
+        self.password = _get_env("PASSWORD")
+        # SSL verification flag
+        verify_raw = _get_env("VERIFY_SSL", required=False, default="true")
+        self.verify_ssl = str(verify_raw).lower() in ("true", "1", "yes")
+
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
+
+        # Normalize URLs
+        self.upload_url = upload.rstrip('/') if upload else upload
+        self.instance_url = instance.rstrip('/') if instance else instance

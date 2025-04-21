@@ -10,6 +10,9 @@ setup(
         "requests>=2.0.0",
         "python-dotenv>=0.19.0",
     ],
+    extras_require={
+        'dev': ['pytest'],
+    },
     entry_points={
         "console_scripts": [
             "upload-folder-peertube=upload_folder_peertube:main",
