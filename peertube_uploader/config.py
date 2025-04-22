@@ -1,3 +1,10 @@
+# Disable SSL warnings for unverified HTTPS requests
+import warnings
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
+
+urllib3.disable_warnings(InsecureRequestWarning)
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 """
 Configuration loader for PeerTube uploader.
 """

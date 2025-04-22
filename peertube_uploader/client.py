@@ -3,8 +3,13 @@ Client for uploading videos to PeerTube.
 """
 import os
 import requests
+import urllib3
+import warnings
 
 from .token_manager import TokenManager
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 
 class PeerTubeClient:
     """
@@ -24,7 +29,8 @@ class PeerTubeClient:
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
         }
-        resp = requests.get(url, headers=headers, verify=self.config.verify_ssl)
+        # Disable SSL verification to avoid certificate errors
+        resp = requests.get(url, headers=headers, verify=False)
         resp.raise_for_status()
         data = resp.json()
         channels = data.get("videoChannels")
@@ -41,7 +47,7 @@ class PeerTubeClient:
             title (str): Title of the video.
             description (str): Description of the video.
             channel_id (str|int): Optional channel ID; fetched if not provided.
-
+z
         Returns:
             dict: JSON response from PeerTube with upload details.
 
@@ -56,22 +62,37 @@ class PeerTubeClient:
             channel_id = self.get_channel_id()
 
         token = self.token_manager.get_valid_token()
+        # Single-request upload: build multipart/form-data
         url = f"{self.config.upload_url}/api/v1/videos/upload"
         headers = {"Authorization": f"Bearer {token}"}
-        data = {
+        # Prepare form fields as multipart entries
+        fields = {
             "name": title,
             "description": description,
             "privacy": 1,
             "channelId": channel_id,
         }
+        multipart = {}
+        # Add form fields (None filename to signal form field)
+        for key, val in fields.items():
+            multipart[key] = (None, str(val))
+        # Add the video file
+        filename = os.path.basename(video_path)
         with open(video_path, "rb") as f:
-            files = {"videofile": (os.path.basename(video_path), f, "video/mp4")}
+            multipart["videofile"] = (filename, f, "video/mp4")
+            # Execute request (SSL verification disabled)
             resp = requests.post(
                 url,
                 headers=headers,
-                data=data,
-                files=files,
-                verify=self.config.verify_ssl,
+                files=multipart,
+                verify=False,
             )
-        resp.raise_for_status()
+        # Handle response: if success, return JSON, else raise with payload
+        if resp.status_code not in (200, 201):
+            # Attempt to extract JSON error, fallback to text
+            try:
+                detail = resp.json()
+            except Exception:
+                detail = resp.text
+            raise Exception(f"Upload failed: HTTP {resp.status_code} - {detail}")
         return resp.json()

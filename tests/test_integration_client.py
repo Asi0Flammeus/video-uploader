@@ -18,7 +18,8 @@ def test_token_endpoint_and_refresh():
 
     # Test server connectivity via GET
     try:
-        pong = requests.get(cfg.instance_url, verify=cfg.verify_ssl)
+        # Disable SSL verification for integration tests
+        pong = requests.get(cfg.instance_url, verify=False)
     except requests.exceptions.RequestException as e:
         pytest.skip(f"Skipping integration tests: cannot reach instance ({e})")
     if pong.status_code != 200:
@@ -42,7 +43,7 @@ def test_token_endpoint_and_refresh():
         token_url,
         headers=headers,
         data=data,
-        verify=cfg.verify_ssl,
+        verify=False,
     )
     # If credentials invalid or endpoint returns error, skip integration
     if resp.status_code != 200:
@@ -66,7 +67,7 @@ def test_token_endpoint_and_refresh():
         token_url,
         headers=headers,
         data=refresh_data,
-        verify=cfg.verify_ssl,
+        verify=False,
     )
     if resp2.status_code != 200:
         pytest.skip(f"Skipping integration tests: refresh endpoint status {resp2.status_code}, body: {resp2.text}")

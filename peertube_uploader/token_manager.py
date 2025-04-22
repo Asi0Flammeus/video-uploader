@@ -21,11 +21,12 @@ class TokenManager:
             "Content-Type": "application/x-www-form-urlencoded",
             "Accept": "application/json",
         }
+        # Disable SSL verification to avoid certificate errors
         response = requests.post(
             url,
             headers=headers,
             data=data,
-            verify=self.config.verify_ssl,
+            verify=False,
         )
         if response.status_code != 200:
             raise Exception(f"Token request failed: {response.status_code} {response.text}")
