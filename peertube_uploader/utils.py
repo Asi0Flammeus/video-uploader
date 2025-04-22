@@ -71,3 +71,64 @@ def extract_language(filename: str) -> str:
             return part.lower()
     # No valid language code found
     raise ValueError(f"Language code not found in filename: {filename}")
+  
+def get_chapter_name(
+    course_index: str,
+    part_chapter: Tuple[int, int],
+    code_language: str,
+) -> str:
+    """
+    Retrieve the chapter title for a given course, part, and language.
+
+    course_index: directory name under PATH_TO_COURSES (e.g., 'btc101')
+    part_chapter: tuple of (part_number, chapter_number)
+    code_language: language code matching the markdown filename (e.g., 'en', 'fr')
+
+    The markdown file is at {PATH_TO_COURSES}/{course_index}/{code_language}.md.
+    A '+++' line demarcates front matter; parsing starts after this.
+    Count level-1 headings (#) to identify the requested part,
+    then within that part, count level-2 headings (##) to get the requested chapter.
+    Returns the chapter title without leading '#' characters.
+    """
+    from .config import Config
+    import os
+
+    config = Config()
+    md_path = os.path.join(config.course_path, course_index, f"{code_language}.md")
+    if not os.path.isfile(md_path):
+        raise FileNotFoundError(f"Course markdown not found: {md_path}")
+
+    part_target, chapter_target = part_chapter
+
+    # Skip front matter marked by '+++'
+    with open(md_path, 'r', encoding='utf-8') as f:
+        # Skip until first '+++'
+        for line in f:
+            if line.strip().startswith('+++'):
+                break
+        # Skip until closing '+++'
+        for line in f:
+            if line.strip().startswith('+++'):
+                break
+
+        # Now parse content headings
+        part_count = 0
+        for line in f:
+            if line.startswith('# '):
+                part_count += 1
+                if part_count == part_target:
+                    # Found target part; search for chapters within
+                    chapter_count = 0
+                    for inner in f:
+                        if inner.startswith('# '):
+                            # Next part encountered; stop searching
+                            break
+                        if inner.startswith('## '):
+                            chapter_count += 1
+                            if chapter_count == chapter_target:
+                                return inner.lstrip('#').strip()
+                    # Part found but chapter missing
+                    break
+    raise ValueError(
+        f"Chapter {chapter_target} of part {part_target} not found in {md_path}"
+    )

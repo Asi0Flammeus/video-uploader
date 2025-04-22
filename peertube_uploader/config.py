@@ -50,6 +50,7 @@ class Config:
     verify_ssl: bool
     upload_url: str
     instance_url: str
+    course_path: str
 
     def __init__(self) -> None:
         missing = []
@@ -76,6 +77,13 @@ class Config:
         # SSL verification flag
         verify_raw = _get_env("VERIFY_SSL", required=False, default="true")
         self.verify_ssl = str(verify_raw).lower() in ("true", "1", "yes")
+        # Courses directory path
+        courses_path = _get_env("PATH_TO_COURSES")
+        self.course_path = (
+            os.path.abspath(os.path.expanduser(courses_path))
+            if courses_path
+            else courses_path
+        )
 
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
