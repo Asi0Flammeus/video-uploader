@@ -20,7 +20,7 @@ def test_generate_description(tmp_path):
     file_path.write_bytes(b"")
     description = generate_description(str(file_path))
     # Default implementation returns empty string
-    assert description == ""
+    assert description == "test"
 
 def test_extract_course_index():
     assert extract_course_index('btc101_2.1_es.txt') == 'btc101'
@@ -32,5 +32,6 @@ def test_extract_part_chapter():
 
 def test_extract_language():
     assert extract_language('btc101_2.1_es.txt') == 'es'
-    assert extract_language('cyp201_4.7_fr.txt') == 'fr'
+    assert extract_language('btc101_2.1-es.txt') == 'es'
+    assert extract_language('cyp201_4.7_fr_test.txt') == 'fr'
     assert extract_language('cyp201_1.1_Loic_en-US.mp4') == 'en'

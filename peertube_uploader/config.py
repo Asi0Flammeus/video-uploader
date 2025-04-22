@@ -43,7 +43,15 @@ class Config:
     CLIENT_SECRET, USERNAME, PASSWORD. Optional VERIFY_SSL.
     Surrounding whitespace and quotes are stripped from values.
     """
-    def __init__(self):
+    client_id: str
+    client_secret: str
+    username: str
+    password: str
+    verify_ssl: bool
+    upload_url: str
+    instance_url: str
+
+    def __init__(self) -> None:
         missing = []
         # Helper to read and clean env vars
         def _get_env(name, required=True, default=None):

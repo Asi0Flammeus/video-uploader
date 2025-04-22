@@ -10,7 +10,7 @@ from peertube_uploader.finder import find_mp4_files
 from peertube_uploader.utils import generate_title, generate_description
 from peertube_uploader.client import PeerTubeClient
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="Upload all .mp4 files in a folder to PeerTube."
     )

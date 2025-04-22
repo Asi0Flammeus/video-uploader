@@ -3,15 +3,16 @@ Utility functions for generating video metadata.
 """
 import os
 import re
+from typing import Tuple
 
-def generate_title(file_path):
+def generate_title(file_path: str) -> str:
     """
     Generate a title for the video based on the file path.
     Currently uses the file name without extension.
     """
     return os.path.splitext(os.path.basename(file_path))[0]
 
-def generate_description(file_path):
+def generate_description(file_path: str) -> str:
     """
     Generate a description for the video based on the file path.
     Currently returns an empty string. Extend with custom logic as needed.
@@ -19,7 +20,7 @@ def generate_description(file_path):
     return "test"
 
 
-def extract_course_index(filename):
+def extract_course_index(filename: str) -> str:
     """
     Extract the course index (3 letters and 3 digits) from the filename.
     Example: "btc101_2.1_es.txt" -> "btc101"
@@ -31,7 +32,7 @@ def extract_course_index(filename):
     raise ValueError(f"Course index not found in filename: {filename}")
 
 
-def extract_part_chapter(filename):
+def extract_part_chapter(filename: str) -> Tuple[int, int]:
     """
     Extract the part and chapter numbers from the filename as a tuple (part, chapter).
     Filename contains a float pattern like "2.1" representing part.chapter.
@@ -44,18 +45,29 @@ def extract_part_chapter(filename):
     raise ValueError(f"Part and chapter not found in filename: {filename}")
 
 
-def extract_language(filename):
+def extract_language(filename: str) -> str:
     """
     Extract the language code from the filename.
-    Language is the last segment before the extension, separated by non-alphanumeric characters.
-    Special case: 'en-US' maps to 'en'.
+    Supports codes at the end of the base name, with optional region suffix:
+      Examples: 'video_es.mp4' -> 'es', 'video-en-US.mp4' -> 'en', 'video_en_US.mp4' -> 'en'.
     """
     base = os.path.basename(filename)
     name, _ = os.path.splitext(base)
-    segments = [seg for seg in re.split(r'[^A-Za-z0-9-]+', name) if seg]
-    if not segments:
-        raise ValueError(f"Language code not found in filename: {filename}")
-    lang = segments[-1].lower()
-    if lang == 'en-us':
-        return 'en'
-    return lang
+    # Split on underscore to preserve hyphens for region codes
+    parts = name.split('_')
+    # Iterate backwards to find the first valid language code
+    for part in reversed(parts):
+        # Region-coded with hyphen, e.g., en-US
+        if re.fullmatch(r'[A-Za-z]{2,3}-[A-Za-z]{2}', part):
+            return part.split('-', 1)[0].lower()
+        # Generic hyphen suffix, e.g., 2.1-es, cyp201-4.7-fr
+        if '-' in part:
+            suffix = part.rsplit('-', 1)[1]
+            if re.fullmatch(r'[A-Za-z]{2}', suffix):
+                return suffix.lower()
+            # continue if suffix not valid
+        # Simple two-letter code, e.g., es, fr
+        if re.fullmatch(r'[A-Za-z]{2}', part):
+            return part.lower()
+    # No valid language code found
+    raise ValueError(f"Language code not found in filename: {filename}")

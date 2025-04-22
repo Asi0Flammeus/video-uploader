@@ -5,6 +5,8 @@ import os
 import requests
 import urllib3
 import warnings
+from typing import Optional, Union, Dict, Any
+from .config import Config
 
 from .token_manager import TokenManager
 
@@ -15,11 +17,11 @@ class PeerTubeClient:
     """
     Upload videos to a PeerTube instance using OAuth authentication.
     """
-    def __init__(self, config):
-        self.config = config
-        self.token_manager = TokenManager(config)
+    def __init__(self, config: Config) -> None:
+        self.config: Config = config
+        self.token_manager: TokenManager = TokenManager(config)
 
-    def get_channel_id(self):
+    def get_channel_id(self) -> int:
         """
         Fetch the user's first video channel ID.
         """
@@ -38,7 +40,13 @@ class PeerTubeClient:
             raise Exception("No video channels available for user")
         return channels[0].get("id")
 
-    def upload_video(self, video_path, title, description="", channel_id=None):
+    def upload_video(
+        self,
+        video_path: str,
+        title: str,
+        description: str = "",
+        channel_id: Optional[Union[int, str]] = None,
+    ) -> Dict[str, Any]:
         """
         Upload a single video file to PeerTube.
 
